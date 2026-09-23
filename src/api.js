@@ -1,10 +1,28 @@
-const BASE = import.meta.env.VITE_API_URL ?? "";
+// Production API root (must end with /api — paths below are relative to it)
+const DEFAULT_API_BASE = "https://calculator-backend-jwj5.onrender.com/api";
+
+function normalizeApiBase(url) {
+  let base = (url || DEFAULT_API_BASE).trim().replace(/\/$/, "");
+  if (!base.endsWith("/api")) {
+    base = `${base}/api`;
+  }
+  return base;
+}
+
+const BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
+  const url = `${BASE}${path.startsWith("/") ? path : `/${path}`}`;
+
+  let res;
+  try {
+    res = await fetch(url, {
+      headers: { "Content-Type": "application/json", ...options.headers },
+      ...options,
+    });
+  } catch (err) {
+    throw new Error(err?.message || "Failed to fetch");
+  }
 
   if (res.status === 204) return null;
 
@@ -20,17 +38,17 @@ async function request(path, options = {}) {
 }
 
 export const calculate = (expression) =>
-  request("/api/calculate/", {
+  request("/calculate/", {
     method: "POST",
     body: JSON.stringify({ expression }),
   });
 
-export const getHistory = () => request("/api/history/");
+export const getHistory = () => request("/history/");
 
-export const getHistoryItem = (id) => request(`/api/history/${id}/`);
+export const getHistoryItem = (id) => request(`/history/${id}/`);
 
 export const deleteHistoryItem = (id) =>
-  request(`/api/history/${id}/`, { method: "DELETE" });
+  request(`/history/${id}/`, { method: "DELETE" });
 
 export const clearHistory = () =>
-  request("/api/history/clear/", { method: "DELETE" });
+  request("/history/clear/", { method: "DELETE" });
